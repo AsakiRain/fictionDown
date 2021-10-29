@@ -44,8 +44,9 @@ class Spider():  # 定义爬虫类
         for a in aa:
             title = self.del_title(a.xpath('text()')[0])
             url = self.url + a.xpath("@href")[0].split('/')[-1]
-            print(url)
+            print('#',end='')
             self.content_list.append({"title": title, "url": url})
+        print()
 
     def del_title(self, string):  # 处理特殊字符
         res = ''
@@ -104,9 +105,10 @@ class Spider():  # 定义爬虫类
         file.close()
 
     def run(self):
-        print("读取列表中。。。。")
+        print("读取中。。。。")
         self.get_list()
-        print("列表读取完毕，共%d章" % len(self.content_list))
+        print('下载：《' + self.name + '》')
+        print("章节读取完毕，共%d章" % len(self.content_list))
         q = queue.Queue()
         if not os.path.exists(os.path.join(ABSPATH, self.name)):
             print('创建目录。。。。')
@@ -118,12 +120,12 @@ class Spider():  # 定义爬虫类
         for i in self.content_list:
             q.put((i['title'], i['url']))
         q.join()
-        print("下载完成，文件整合中。。。")
+        print("下载完成，文件整合中。。。。")
         self.get_novel()
         print("文件整合完毕！！")
         print(f"共计{len(self.content_list)}章，成功下载{len(self.content_list) - self.error_num}章, 失败章节：{'、'.join(self.error_list)}")
-if(len(sys.argv) != 4):
+if(len(sys.argv) != 3):
     task = Spider("https://www.xbiquge.la/84/84624/", 1)     # 链接末尾需要斜杠！
 else:
-    task = Spider(sys.argv[1], sys.argv[2])
+    task = Spider(sys.argv[1], int(sys.argv[2]))
 task.run()
