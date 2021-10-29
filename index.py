@@ -56,7 +56,7 @@ class Spider():  # 定义爬虫类
         l = Lock()
         while True:
             title, url = q.get()
-            if(os.path.exists(os.path.join(ABSPATH, "novel", f"{title}.txt"))):
+            if(os.path.exists(os.path.join(ABSPATH, self.name, f"{title}.txt"))):
                 print('已存在：' + title)
             else:
                 try:
@@ -65,7 +65,7 @@ class Spider():  # 定义爬虫类
                     print("超时：", title)
                     self.error_num += 1
                     self.error_list.append(title + "（网络错误）")
-                    with open(os.path.join(ABSPATH, 'test.ml'), 'a') as ff:
+                    with open(os.path.join(ABSPATH, self.name, 'test.ml'), 'a') as ff:
                         ff.write(url + "\n")
                 else:
                     tree = etree.HTML(html.content)
@@ -76,7 +76,7 @@ class Spider():  # 定义爬虫类
                         l.release()
                         # 处理章节名称异常导致的文件错误
                         try:
-                            with open(os.path.join(ABSPATH, "novel", f"{title}.txt"), 'w', encoding="utf8") as f:
+                            with open(os.path.join(ABSPATH, self.name, f"{title}.txt"), 'w', encoding="utf8") as f:
                                 f.write(title + "\n" + str(content) + "\n")
                         except:
                             print('==>文件名有误：' + title)
@@ -93,9 +93,9 @@ class Spider():  # 定义爬虫类
             if i['title'] in self.error_list:
                 continue
             try:
-                with open(os.path.join(ABSPATH, "novel", f"{i['title']}.txt"), 'r', encoding="utf8") as f2:
+                with open(os.path.join(ABSPATH, self.name, f"{i['title']}.txt"), 'r', encoding="utf8") as f2:
                     file.write(f2.read())
-                # os.remove(os.path.join(ABSPATH, "novel", f"{i['title']}.txt"))
+                # os.remove(os.path.join(ABSPATH, self.name, f"{i['title']}.txt"))
             except:
                 pass
         file.close()
@@ -105,9 +105,9 @@ class Spider():  # 定义爬虫类
         self.get_list()
         print("列表读取完毕，共%d章" % len(self.content_list))
         q = queue.Queue()
-        if not os.path.exists(os.path.join(ABSPATH, "novel")):
+        if not os.path.exists(os.path.join(ABSPATH, self.name)):
             print('创建目录。。。。')
-            os.makedirs(os.path.join(ABSPATH, "novel"))
+            os.makedirs(os.path.join(ABSPATH, self.name))
         for i in range(self.num):
             t = Thread(target=self.get_content, args=(q,))
             t.daemon = True
