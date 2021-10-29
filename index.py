@@ -1,12 +1,16 @@
 import os
 import queue
 from threading import Lock, Thread
-
+import time
 import requests
 from fake_useragent import UserAgent
 from lxml import etree
 
+ABSPATH = os.path.dirname(os.path.abspath(__file__)) + os.path.sep
+print(ABSPATH)
 
+def land(name):
+    return ABSPATH + name
 class Spider():  # 定义爬虫类
     def __init__(self, url, name, num=10):  # 初始化
         """
@@ -36,7 +40,7 @@ class Spider():  # 定义爬虫类
         aa = tree.xpath(self.list_rule)
         for a in aa:
             title = self.del_title(a.xpath('text()')[0])
-            url = self.url + a.xpath("@href")[0]
+            url = self.url + a.xpath("@href")[0].split('/')[-1]
             print(url)
             self.content_list.append({"title": title, "url": url})
 
@@ -52,31 +56,36 @@ class Spider():  # 定义爬虫类
         l = Lock()
         while True:
             title, url = q.get()
-            try:
-                html = requests.get(url, timeout=10,headers=self.get_ua())
-            except:
-                print("超时：", title)
-                self.error_num += 1
-                self.error_list.append(title + "（网络错误）")
-                with open("test.ml", 'a') as ff:
-                    ff.write(url + "\n")
+            if(os.path.exists(os.path.join(ABSPATH, "novel", f"{title}.txt"))):
+                print('已存在：' + title)
             else:
-                tree = etree.HTML(html.content)
-                content = ''.join(tree.xpath(self.content_rule))
-                if not os.path.exists("novel"):
-                    os.makedirs("novel")
-                l.acquire()
-                print("已下载：" + title)
-                l.release()
-                # 处理章节名称异常导致的文件错误
                 try:
-                    with open(os.path.join("novel", f"{title}.txt"), 'w', encoding="utf8") as f:
-                        f.write(title + "\n" + str(content) + "\n")
+                    html = requests.get(url, timeout=10,headers=self.get_ua())
                 except:
-                    self.error_list.append(title + "(文件名错误)")
+                    print("超时：", title)
                     self.error_num += 1
-            finally:
-                q.task_done()
+                    self.error_list.append(title + "（网络错误）")
+                    with open(os.path.join(ABSPATH, 'test.ml'), 'a') as ff:
+                        ff.write(url + "\n")
+                else:
+                    tree = etree.HTML(html.content)
+                    content = ''.join(tree.xpath(self.content_rule))
+                    if(content):
+                        l.acquire()
+                        print("已下载：" + title)
+                        l.release()
+                        # 处理章节名称异常导致的文件错误
+                        try:
+                            with open(os.path.join(ABSPATH, "novel", f"{title}.txt"), 'w', encoding="utf8") as f:
+                                f.write(title + "\n" + str(content) + "\n")
+                        except:
+                            print('==>文件名有误：' + title)
+                            self.error_list.append(title + "(文件名错误)")
+                            self.error_num += 1
+                    else:
+                        print('==>空内容，重新下载：'+ title)
+                        q.put((title, url))
+            q.task_done()
 
     def get_novel(self): #"将单章小说整合成一整部"
         file = open(f"{self.name}.txt", 'w', encoding="utf8")
@@ -84,9 +93,9 @@ class Spider():  # 定义爬虫类
             if i['title'] in self.error_list:
                 continue
             try:
-                with open(os.path.join("novel", f"{i['title']}.txt"), 'r', encoding="utf8") as f2:
+                with open(os.path.join(ABSPATH, "novel", f"{i['title']}.txt"), 'r', encoding="utf8") as f2:
                     file.write(f2.read())
-                os.remove(os.path.join("novel", f"{i['title']}.txt"))
+                # os.remove(os.path.join(ABSPATH, "novel", f"{i['title']}.txt"))
             except:
                 pass
         file.close()
@@ -96,6 +105,9 @@ class Spider():  # 定义爬虫类
         self.get_list()
         print("列表读取完毕，共%d章" % len(self.content_list))
         q = queue.Queue()
+        if not os.path.exists(os.path.join(ABSPATH, "novel")):
+            print('创建目录。。。。')
+            os.makedirs(os.path.join(ABSPATH, "novel"))
         for i in range(self.num):
             t = Thread(target=self.get_content, args=(q,))
             t.daemon = True
@@ -108,5 +120,5 @@ class Spider():  # 定义爬虫类
         print("文件整合完毕！！")
         print(f"共计{len(self.content_list)}章，成功下载{len(self.content_list) - self.error_num}章, 失败章节：{'、'.join(self.error_list)}")
 
-a = Spider("https://www.xbiquge.la/84/84624", "假如被巫女缠住", 100)
+a = Spider("https://www.xbiquge.la/84/84624/", "假如被巫女缠住", 1)     # 链接末尾需要斜杠！
 a.run()
