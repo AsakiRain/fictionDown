@@ -92,7 +92,7 @@ class Spider():  # 定义爬虫类
             q.task_done()
 
     def get_novel(self): #"将单章小说整合成一整部"
-        file = open(f"{self.name}.txt", 'w', encoding="utf8")
+        file = open(os.path.join(ABSPATH, f"{self.name}.txt"), 'w', encoding="utf8")
         for i in self.content_list:
             if i['title'] in self.error_list:
                 continue
