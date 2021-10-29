@@ -1,4 +1,4 @@
-import os
+import os,sys
 import queue
 from threading import Lock, Thread
 import time
@@ -12,19 +12,20 @@ print(ABSPATH)
 def land(name):
     return ABSPATH + name
 class Spider():  # 定义爬虫类
-    def __init__(self, url, name, num=10):  # 初始化
+    def __init__(self, url, num=10):  # 初始化
         """
         :param url:小说的全部目录界面
         :param name:小说名字
         :param num:线程数量，默认为10
         """
         self.url = url
-        self.name = name
+        self.name = None
         self.num = num
         self.error_num = 0  # 出错章节的数量
         self.error_list = []
         self.encode = 'utf8'  # 编码为utf8
 
+        self.title_rule = "//div[@id='info']/h1/text()"
         self.list_rule = "//div[@id='list']/dl/dd/a"  # 提取章节列表的规则<a>
         self.content_rule = "//div[@id='content']/text()"  # 提取正文的规则
         self.content_list = []
@@ -37,6 +38,8 @@ class Spider():  # 定义爬虫类
     def get_list(self):  # 获取章节列表
         html = requests.get(self.url, headers=self.get_ua())  # 请求网络
         tree = etree.HTML(html.content.decode(self.encode))  # 设置编码
+        self.name = tree.xpath(self.title_rule)[0]
+        print(self.name)
         aa = tree.xpath(self.list_rule)
         for a in aa:
             title = self.del_title(a.xpath('text()')[0])
@@ -119,6 +122,8 @@ class Spider():  # 定义爬虫类
         self.get_novel()
         print("文件整合完毕！！")
         print(f"共计{len(self.content_list)}章，成功下载{len(self.content_list) - self.error_num}章, 失败章节：{'、'.join(self.error_list)}")
-
-a = Spider("https://www.xbiquge.la/84/84624/", "假如被巫女缠住", 1)     # 链接末尾需要斜杠！
-a.run()
+if(len(sys.argv) != 4):
+    task = Spider("https://www.xbiquge.la/84/84624/", 1)     # 链接末尾需要斜杠！
+else:
+    task = Spider(sys.argv[1], sys.argv[2])
+task.run()
